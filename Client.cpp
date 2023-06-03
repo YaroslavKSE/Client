@@ -3,7 +3,6 @@
 #include <WS2tcpip.h>
 #pragma comment(lib, "ws2_32.lib") // link with ws2_32.lib
 
-
 int** fillmatrix(const int matrixsize) {
 	int** matrix = new int* [matrixsize];
 
@@ -31,11 +30,23 @@ void printmatrix(int** matrix, int matrixsize)
 	}
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+	if (argc < 2) {
+		std::cout << "You should specify matrix size" << "\n";
+	}
+
+	const int matrixSize = atoi(argv[1]);
+	
+
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
 		std::cerr << "WSAStartup failed.\n";
 		return 1;
+	}
+	else
+	{
+		std::cout << "Starting client with" << matrixSize << "x" << matrixSize << "matrix size" << "\n";
+
 	}
 	// create a socket
 	SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -59,7 +70,6 @@ int main() {
 
 	// send matrix size to server
 
-	int matrixSize = 3;
 	int bytesSentFirst = send(clientSocket, (char*)&matrixSize, sizeof(matrixSize), 0);
 	if (bytesSentFirst == SOCKET_ERROR) {
 		std::cerr << "Error sending matrix size: " << WSAGetLastError() << "\n";
@@ -76,7 +86,7 @@ int main() {
 	int** sendBuffer = fillmatrix(matrixSize); // replace with actual matrix values
 	for (int i = 0; i < matrixSize; i++)
 	{
-		int bytesForRow = send(clientSocket, (char*)sendBuffer[i], sizeof(sendBuffer) * matrixSize, 0);
+		int bytesForRow = send(clientSocket, (char*)sendBuffer[i], sizeof(int) * matrixSize, 0);
 		
 		if (bytesForRow == SOCKET_ERROR) {
 			std::cerr << "Error sending row of matrix: " << WSAGetLastError() << "\n";
@@ -84,8 +94,8 @@ int main() {
 			WSACleanup();
 			return 1;
 		}
-		else { std::cerr << "Matrix row send successfuly " << "\n"; }
 	}
+	std::cout << "Matrix send successfuly " << "\n";
 	
 	printmatrix(sendBuffer, matrixSize);
 	// receive result from server
@@ -96,7 +106,7 @@ int main() {
 
 	for (int i = 0; i < matrixSize; i++)
 	{
-		int bytesForRow = recv(clientSocket, (char*)recvBuffer[i], sizeof(recvBuffer) * matrixSize, 0);
+		int bytesForRow = recv(clientSocket, (char*)recvBuffer[i], sizeof(int) * matrixSize, 0);
 
 		if (bytesForRow == SOCKET_ERROR) {
 			std::cerr << "Error recieving row of matrix " << WSAGetLastError() << "\n";
@@ -104,11 +114,10 @@ int main() {
 			WSACleanup();
 			return 1;
 		}
-		else { std::cerr << "Matrix row recieved successfuly " << "\n"; }
-
 	}
-	printmatrix(recvBuffer, matrixSize);
 
+	std::cerr << "Rebuilded matrix recieved successfuly " << "\n";
+	printmatrix(recvBuffer, matrixSize);
 
 	// cleanup
 	closesocket(clientSocket);
