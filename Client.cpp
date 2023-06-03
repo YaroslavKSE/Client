@@ -98,6 +98,31 @@ int main(int argc, char* argv[]) {
 	std::cout << "Matrix send successfuly " << "\n";
 	
 	printmatrix(sendBuffer, matrixSize);
+
+	// recivieng confirmation from server
+	const int bufferSize = 63;
+	char buffer[bufferSize];
+	int bytesReceived = recv(clientSocket, buffer, bufferSize, 0);
+	if (bytesReceived == SOCKET_ERROR) {
+		std::cerr << "Error receiving waiting message: " << WSAGetLastError() << "\n";
+		closesocket(clientSocket);
+		WSACleanup();
+		return 1;
+	}
+	std::cout << buffer << std::endl;
+
+	int command = 0;
+	std::cin >> command;
+
+	int bytesToSendCommand = send(clientSocket, (char*)&command, sizeof(command), 0);
+	if (bytesToSendCommand == SOCKET_ERROR) {
+		std::cout << "Error sending command" << WSAGetLastError() << "\n";
+		closesocket(clientSocket);
+		WSACleanup();
+		return 1;
+	}
+	else { std::cout << "Command sent" << "\n"; }
+
 	// receive result from server
 	int** recvBuffer = new int* [matrixSize];
 	for (int i = 0; i < matrixSize; ++i) {
