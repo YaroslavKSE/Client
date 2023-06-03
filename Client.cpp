@@ -67,30 +67,49 @@ int main() {
 		WSACleanup();
 		return 1;
 	}
+	else{ std::cerr << "Matrix size of " << matrixSize << "x" << matrixSize << " sent succesfully"  << "\n"; }
+	
+	//row by row
+	// or one big dimensional array and server it devides
 
 	// send the matrix to server
 	int** sendBuffer = fillmatrix(matrixSize); // replace with actual matrix values
-	int bytesSentSecond = send(clientSocket, (char*)sendBuffer, sizeof(sendBuffer), 0);
-	if (bytesSentSecond == SOCKET_ERROR) {
-		std::cerr << "Error sending matrix: " << WSAGetLastError() << "\n";
-		closesocket(clientSocket);
-		WSACleanup();
-		return 1;
+	for (int i = 0; i < matrixSize; i++)
+	{
+		int bytesForRow = send(clientSocket, (char*)sendBuffer[i], sizeof(sendBuffer) * matrixSize, 0);
+		
+		if (bytesForRow == SOCKET_ERROR) {
+			std::cerr << "Error sending row of matrix: " << WSAGetLastError() << "\n";
+			closesocket(clientSocket);
+			WSACleanup();
+			return 1;
+		}
+		else { std::cerr << "Matrix row send successfuly " << "\n"; }
 	}
-
+	
+	printmatrix(sendBuffer, matrixSize);
 	// receive result from server
-	int** recvBuffer;
-	int bytesReceived = recv(clientSocket, (char*)&recvBuffer, sizeof(recvBuffer), 0);
-	if (bytesReceived == SOCKET_ERROR) {
-		std::cerr << "Error receiving data: " << WSAGetLastError() << "\n";
-		closesocket(clientSocket);
-		WSACleanup();
-		return 1;
+	int** recvBuffer = new int* [matrixSize];
+	for (int i = 0; i < matrixSize; ++i) {
+		recvBuffer[i] = new int[matrixSize];
 	}
 
-	
-	std::cout << "Result: " << recvBuffer << "\n";
-	
+	for (int i = 0; i < matrixSize; i++)
+	{
+		int bytesForRow = recv(clientSocket, (char*)recvBuffer[i], sizeof(recvBuffer) * matrixSize, 0);
+
+		if (bytesForRow == SOCKET_ERROR) {
+			std::cerr << "Error recieving row of matrix " << WSAGetLastError() << "\n";
+			closesocket(clientSocket);
+			WSACleanup();
+			return 1;
+		}
+		else { std::cerr << "Matrix row recieved successfuly " << "\n"; }
+
+	}
+	printmatrix(recvBuffer, matrixSize);
+
+
 	// cleanup
 	closesocket(clientSocket);
 	WSACleanup();
