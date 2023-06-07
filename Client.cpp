@@ -20,8 +20,7 @@ int** fillmatrix(const int matrixsize) {
 	return matrix;
 }
 
-void printmatrix(int** matrix, int matrixsize)
-{
+void printmatrix(int** matrix, int matrixsize) {
 	for (int i = 0; i < matrixsize; ++i) {
 		for (int j = 0; j < matrixsize; ++j) {
 			std::cout << matrix[i][j] << " ";
@@ -36,7 +35,6 @@ int main(int argc, char* argv[]) {
 	}
 
 	const int matrixSize = atoi(argv[1]);
-	
 
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -45,7 +43,7 @@ int main(int argc, char* argv[]) {
 	}
 	else
 	{
-		std::cout << "Starting client with" << matrixSize << "x" << matrixSize << "matrix size" << "\n";
+		std::cout << "Starting client with " << matrixSize << "x" << matrixSize << " matrix size" << "\n";
 
 	}
 	// create a socket
@@ -65,6 +63,27 @@ int main(int argc, char* argv[]) {
 		std::cerr << "Error connecting to server: " << WSAGetLastError() << "\n";
 		closesocket(clientSocket);
 		WSACleanup();
+		return 1;
+	}
+
+	// Get the local address and port associated with the client socket
+	sockaddr_in localAddress{};
+	socklen_t addressLength = sizeof(localAddress);
+	if (getsockname(clientSocket, (struct sockaddr*)&localAddress, &addressLength) == -1) {
+		std::cerr << "Failed to get local socket information.\n";
+		closesocket(clientSocket);
+		return 1;
+	}
+
+	// Extract client ID or socket number from the local address
+	unsigned short clientId = ntohs(localAddress.sin_port);
+	//std::cout << "Client ID: " << clientId << "\n";
+
+	// Send the client ID to the server
+
+	if (send(clientSocket, (char*)&clientId, sizeof(clientId), 0) == -1) {
+		std::cerr << "Failed to send client ID.\n";
+		closesocket(clientSocket);
 		return 1;
 	}
 
@@ -97,10 +116,10 @@ int main(int argc, char* argv[]) {
 	}
 	std::cout << "Matrix send successfuly " << "\n";
 	
-	printmatrix(sendBuffer, matrixSize);
+	//printmatrix(sendBuffer, matrixSize);
 
 	// recivieng confirmation from server
-	const int bufferSize = 63;
+	const int bufferSize = 1024; 
 	char buffer[bufferSize];
 	int bytesReceived = recv(clientSocket, buffer, bufferSize, 0);
 	if (bytesReceived == SOCKET_ERROR) {
@@ -123,6 +142,31 @@ int main(int argc, char* argv[]) {
 	}
 	else { std::cout << "Command sent" << "\n"; }
 
+	std::cout << "To check status of calculation press 1" << "\n";
+	int statusCheck = 0;
+	std::cin >> statusCheck;
+
+	int bytesStatus = send(clientSocket, (char*)&statusCheck, sizeof(statusCheck), 0);
+	if (bytesToSendCommand == SOCKET_ERROR) {
+		std::cout << "Error sending command" << WSAGetLastError() << "\n";
+		closesocket(clientSocket);
+		WSACleanup();
+		return 1;
+	}
+	else { std::cout << "Command sent" << "\n"; }
+
+	//size of message from server
+	char bufferStatus[bufferSize];
+	int bytesReceivedStatus = recv(clientSocket, bufferStatus, bufferSize, 0);
+	if (bytesReceived == SOCKET_ERROR) {
+		std::cerr << "Error receiving waiting message: " << WSAGetLastError() << "\n";
+		closesocket(clientSocket);
+		WSACleanup();
+		return 1;
+	}
+	std::cout << bufferStatus << std::endl;
+
+
 	// receive result from server
 	int** recvBuffer = new int* [matrixSize];
 	for (int i = 0; i < matrixSize; ++i) {
@@ -142,7 +186,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	std::cerr << "Rebuilded matrix recieved successfuly " << "\n";
-	printmatrix(recvBuffer, matrixSize);
+	//printmatrix(recvBuffer, matrixSize);
 
 	// cleanup
 	closesocket(clientSocket);
